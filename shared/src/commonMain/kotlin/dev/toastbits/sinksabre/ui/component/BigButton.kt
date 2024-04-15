@@ -1,0 +1,97 @@
+package dev.toastbits.sinksabre.ui.component
+
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import androidx.compose.ui.unit.Dp
+import androidx.compose.material3.Card
+import androidx.compose.material3.Icon
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.LocalTextStyle
+import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.Box
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.luminance
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.style.TextAlign
+
+private const val ICON_SIZE_DP: Float = 70f
+
+@Composable
+fun BigButton(
+    onClick: () -> Unit,
+    colour: Color,
+    modifier: Modifier = Modifier,
+    icon: ImageVector? = null,
+    content: (@Composable () -> Unit)? = null
+) {
+    Card(
+        onClick,
+        modifier,
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = colour,
+            contentColor = colour.getContrasted()
+        )
+    ) {
+        BoxWithConstraints(
+            Modifier.fillMaxSize().padding(10.dp),
+            contentAlignment = Alignment.Center
+        ) {
+            val icon_size: Dp = ICON_SIZE_DP.dp
+            val icon_center_alignment: Alignment? =
+                if (maxWidth < icon_size * 2 && maxHeight < icon_size * 2) Alignment.Center
+                else if (maxWidth < icon_size * 2) Alignment.TopCenter
+                else if (maxHeight < icon_size * 2) Alignment.CenterStart
+                else null
+
+            if (icon != null) {
+                Icon(
+                    icon,
+                    null,
+                    Modifier
+                        .size(icon_size)
+                        .align(icon_center_alignment ?: Alignment.TopStart)
+                )
+            }
+
+            if (content != null && icon_center_alignment != Alignment.Center) {
+                val text_style: TextStyle =
+                    LocalTextStyle.current.copy(
+                        fontSize = 25.sp,
+                        textAlign = TextAlign.Center
+                    )
+
+                Box(
+                    when (icon_center_alignment) {
+                        Alignment.TopCenter -> Modifier.padding(top = icon_size)
+                        Alignment.CenterStart -> Modifier.padding(start = icon_size)
+                        else -> Modifier
+                    }
+                ) {
+                    CompositionLocalProvider(LocalTextStyle provides text_style) {
+                        content?.invoke()
+                    }
+                }
+            }
+        }
+    }
+}
+
+fun Color.getContrasted(keep_alpha: Boolean = false): Color {
+    val base: Color =
+        if (isDark()) Color.White
+        else Color.Black
+    return if (keep_alpha) base.copy(alpha = alpha) else base
+}
+
+fun Color.isDark(): Boolean =
+    luminance() < 0.2
