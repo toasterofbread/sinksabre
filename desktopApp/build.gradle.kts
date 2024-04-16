@@ -12,6 +12,9 @@ kotlin {
             dependencies {
                 implementation(compose.desktop.currentOs)
                 implementation(project(":shared"))
+
+                val composekit_version: String = extra["composekit.version"] as String
+                implementation("dev.toastbits.composekit:library-desktop:$composekit_version")
             }
         }
     }

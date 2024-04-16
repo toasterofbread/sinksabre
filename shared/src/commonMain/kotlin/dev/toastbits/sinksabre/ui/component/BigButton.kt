@@ -1,7 +1,6 @@
 package dev.toastbits.sinksabre.ui.component
 
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -22,6 +21,9 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.Crossfade
+import dev.toastbits.composekit.utils.composable.AlignableCrossfade
 
 private const val ICON_SIZE_DP: Float = 70f
 
@@ -31,16 +33,24 @@ fun BigButton(
     colour: Color,
     modifier: Modifier = Modifier,
     icon: ImageVector? = null,
+    enabled: Boolean = true,
+    disabledContent: (@Composable () -> Unit)? = null,
     content: (@Composable () -> Unit)? = null
 ) {
+    val container_colour: Color by animateColorAsState(
+        if (enabled) colour
+        else colour.copy(alpha = 0.5f)
+    )
+
     Card(
         onClick,
         modifier,
         shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(
-            containerColor = colour,
+            containerColor = container_colour,
             contentColor = colour.getContrasted()
-        )
+        ),
+        enabled = enabled
     ) {
         BoxWithConstraints(
             Modifier.fillMaxSize().padding(10.dp),
@@ -53,32 +63,42 @@ fun BigButton(
                 else if (maxHeight < icon_size * 2) Alignment.CenterStart
                 else null
 
-            if (icon != null) {
-                Icon(
-                    icon,
-                    null,
-                    Modifier
-                        .size(icon_size)
-                        .align(icon_center_alignment ?: Alignment.TopStart)
-                )
+            Crossfade(
+                icon,
+                Modifier.align(icon_center_alignment ?: Alignment.TopStart)
+            ) {
+                if (it != null) {
+                    Icon(
+                        it,
+                        null,
+                        Modifier.size(icon_size)
+                    )
+                }
             }
 
-            if (content != null && icon_center_alignment != Alignment.Center) {
-                val text_style: TextStyle =
-                    LocalTextStyle.current.copy(
-                        fontSize = 25.sp,
-                        textAlign = TextAlign.Center
-                    )
+            AlignableCrossfade(
+                if (icon_center_alignment == Alignment.Center) null
+                else if (!enabled) disabledContent ?: content
+                else content,
+                contentAlignment = Alignment.Center
+            ) { currentContent ->
+                if (currentContent != null) {
+                    val text_style: TextStyle =
+                        LocalTextStyle.current.copy(
+                            fontSize = 25.sp,
+                            textAlign = TextAlign.Center
+                        )
 
-                Box(
-                    when (icon_center_alignment) {
-                        Alignment.TopCenter -> Modifier.padding(top = icon_size)
-                        Alignment.CenterStart -> Modifier.padding(start = icon_size)
-                        else -> Modifier
-                    }
-                ) {
-                    CompositionLocalProvider(LocalTextStyle provides text_style) {
-                        content?.invoke()
+                    Box(
+                        when (icon_center_alignment) {
+                            Alignment.TopCenter -> Modifier.padding(top = icon_size)
+                            Alignment.CenterStart -> Modifier.padding(start = icon_size)
+                            else -> Modifier
+                        }
+                    ) {
+                        CompositionLocalProvider(LocalTextStyle provides text_style) {
+                            currentContent?.invoke()
+                        }
                     }
                 }
             }
