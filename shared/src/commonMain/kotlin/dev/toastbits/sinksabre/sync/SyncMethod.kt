@@ -22,6 +22,11 @@ sealed interface SyncMethod {
     fun ConfigurationItems(context: AppContext, onModification: (SyncMethod) -> Unit)
 
     suspend fun getSongList(): Result<List<Song>>
+    suspend fun downloadSongs(
+        songs: List<Song>, 
+        directory: PlatformFile,
+        onProgress: (String) -> Unit
+    ): Result<List<PlatformFile>>
 
     enum class Type {
         BEAT_SAVER_USER;

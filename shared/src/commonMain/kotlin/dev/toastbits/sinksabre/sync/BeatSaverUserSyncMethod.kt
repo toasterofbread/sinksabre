@@ -58,10 +58,51 @@ data class BeatSaverUserSyncMethod(val username: String = ""): SyncMethod {
 
         TODO(result.toString())
     }
+
+    override suspend fun downloadSongs(
+        songs: List<Song>,
+        directory: PlatformFile,
+        onProgress: (String) -> Unit
+    ): Result<List<PlatformFile>> = runCatching {
+        val client: HttpClient = getClient()
+
+        onProgress("Getting map download URLs")
+        val maps: List<BeatSaverMapResponse> = client.getSongDownloadUrls(songs).filter { it.versions.isNotEmpty() }
+        
+        for ((index, map) in maps.withIndex()) {
+            onProgress("Downloading ${map.name} by ${map.uploader.name} (${index + 1} / ${maps.size})")
+
+            val response: HttpResponse = client.get(map.versions.first().downloadURL)
+            // TODO extract with java.util.zip.ZipInputStream
+        }
+
+        TODO()
+    }
+
+    private suspend fun HttpClient.getSongDownloadUrls(songs: List<Song>): List<BeatSaverMapResponse> {
+        return songs.chunked(50).flatMap { chunk_songs ->
+            val ids: String = chunk_songs.joinToString(",")
+            val result: Map<String, BeatSaverMapResponse> = get("https://api.beatsaver.com/maps/ids/$ids").body()
+            return@flatMap result.values
+        }
+    }
 }
 
+@Serializable
 private data class BeatSaverUserResponse(
     val id: Int,
-    val avatar: String,
-    val playlistUrl: String?
+    val name: String,
+    val avatar: String
 )
+
+@Serializable
+private data class BeatSaverMapResponse(
+    val id: String,
+    val name: String,
+    val description: String,
+    val uploader: BeatSaverUserResponse,
+    val versions: List<Version>
+) {
+    @Serializable
+    data class Version(val downloadURL: String)
+}

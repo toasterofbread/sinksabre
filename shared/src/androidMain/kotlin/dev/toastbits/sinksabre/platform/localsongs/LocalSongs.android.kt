@@ -39,8 +39,8 @@ actual object LocalSongs {
                 return@mapNotNull null
             }
 
-            val info_file: PlatformFile = level.resolve("Info.dat")
-            if (!info_file.is_file) {
+            val info_file: PlatformFile? = level.listFiles()?.firstOrNull { it.name.lowercase() == "info.dat" }
+            if (info_file?.is_file != true) {
                 return@mapNotNull null
             }
 

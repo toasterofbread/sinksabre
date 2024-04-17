@@ -116,7 +116,9 @@ private fun Content(context: AppContext) {
                 verticalArrangement = arrangement
             ) {
                 BigButton(
-                    { TODO() },
+                    {
+                        context.launchBeatSaber()
+                    },
                     Color(0xFF64B6AC),
                     Modifier.fillMaxWidth().fillMaxHeight(0.5f),
                     icon = Icons.Default.PlayArrow
@@ -125,7 +127,10 @@ private fun Content(context: AppContext) {
                 }
 
                 BigButton(
-                    { TODO() },
+                    { 
+                        val method: SyncMethod = sync_method ?: return@BigButton
+                        
+                    },
                     Color(0xFFE5446D),
                     Modifier.fillMaxSize().weight(1f),
                     icon = Icons.Default.Refresh,

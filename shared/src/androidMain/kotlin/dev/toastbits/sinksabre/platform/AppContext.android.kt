@@ -9,4 +9,10 @@ import kotlinx.coroutines.CoroutineScope
 
 actual class AppContext(val activity: Activity, coroutine_scope: CoroutineScope): PlatformContext(activity, coroutine_scope) {
     actual fun getPrefs(): PlatformPreferences = PlatformPreferencesImpl.getInstance(ctx)
+
+    actual fun launchBeatSaber(): Boolean {
+        val launch_intent: Intent = activity.package_manager.getLaunchIntentForPackage("com.beatgames.beatsaber") ?: return false
+        activity.startActivity(launch_intent)
+        return true
+    }
 }
