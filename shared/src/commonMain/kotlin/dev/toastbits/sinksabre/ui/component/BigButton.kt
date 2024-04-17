@@ -34,6 +34,7 @@ fun BigButton(
     modifier: Modifier = Modifier,
     icon: ImageVector? = null,
     enabled: Boolean = true,
+    full_content: Boolean = false,
     disabledContent: (@Composable () -> Unit)? = null,
     content: (@Composable () -> Unit)? = null
 ) {
@@ -93,7 +94,9 @@ fun BigButton(
                         when (icon_center_alignment) {
                             Alignment.TopCenter -> Modifier.padding(top = icon_size)
                             Alignment.CenterStart -> Modifier.padding(start = icon_size)
-                            else -> Modifier
+                            else ->
+                                if (icon_center_alignment == null && full_content) Modifier.padding(top = icon_size)
+                                else Modifier
                         }
                     ) {
                         CompositionLocalProvider(LocalTextStyle provides text_style) {

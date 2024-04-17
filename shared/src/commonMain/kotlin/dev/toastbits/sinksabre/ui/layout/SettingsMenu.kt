@@ -69,8 +69,10 @@ private fun SyncMethodField(context: AppContext) {
     }
 
     NullableValueAnimatedVisibility(sync_method) {
-        it?.ConfigurationItems(context) {
-            sync_method = it
+        Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            it?.ConfigurationItems(context) {
+                sync_method = it
+            }
         }
     }
 }

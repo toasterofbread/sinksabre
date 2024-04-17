@@ -37,19 +37,15 @@ import org.jetbrains.compose.resources.painterResource
 import dev.toastbits.sinksabre.ui.AppTheme
 import dev.toastbits.sinksabre.ui.layout.*
 import dev.toastbits.sinksabre.ui.component.BigButton
+import dev.toastbits.sinksabre.ui.component.SyncButton
 import dev.toastbits.sinksabre.platform.AppContext
 import dev.toastbits.sinksabre.settings.settings
 import dev.toastbits.sinksabre.sync.SyncMethod
 import androidx.compose.material3.LocalContentColor
+import androidx.compose.animation.core.animateFloatAsState
 
 @Composable
 fun SinkSabre(context: AppContext) {
-    LaunchedEffect(Unit) {
-        if (context.settings.SYNC_ON_START.get()) {
-            // TODO
-        }
-    }
-
     AppTheme {
         Content(context)
     }
@@ -61,7 +57,6 @@ private fun Content(context: AppContext) {
     val arrangement: Arrangement.HorizontalOrVertical = Arrangement.spacedBy(spacing)
 
     var current_menu: Menu by remember { mutableStateOf(Menu.DEFAULT) }
-    val sync_method: SyncMethod? by SyncMethod.observe(context)
 
     Row(
         Modifier.fillMaxSize().background(Color.Black).padding(spacing),
@@ -115,32 +110,32 @@ private fun Content(context: AppContext) {
                 Modifier.fillMaxSize().weight(1f),
                 verticalArrangement = arrangement
             ) {
+                var sync_button_showing_content: Boolean by remember { mutableStateOf(false) }
+                val launch_button_height: Float by animateFloatAsState(
+                    if (sync_button_showing_content) 0.2f
+                    else 0.5f
+                )
+
                 BigButton(
                     {
                         context.launchBeatSaber()
                     },
                     Color(0xFF64B6AC),
-                    Modifier.fillMaxWidth().fillMaxHeight(0.5f),
-                    icon = Icons.Default.PlayArrow
+                    Modifier.fillMaxWidth().fillMaxHeight(launch_button_height),
+                    icon = Icons.Default.PlayArrow,
+                    enabled = context.canLaunchBeatSaber(),
+                    disabledContent = {
+                        Text("Cannot launch")
+                    }
                 ) {
                     Text("Launch")
                 }
 
-                BigButton(
-                    { 
-                        val method: SyncMethod = sync_method ?: return@BigButton
-                        
-                    },
-                    Color(0xFFE5446D),
+                SyncButton(
+                    context,
                     Modifier.fillMaxSize().weight(1f),
-                    icon = Icons.Default.Refresh,
-                    enabled = sync_method?.isConfigured() == true,
-                    disabledContent = {
-                        Text("Sync method not configured")
-                    }
-                ) {
-                    Text("Sync")
-                }
+                    onShowingContentChanged = { sync_button_showing_content = it }
+                )
             }
         }
     }

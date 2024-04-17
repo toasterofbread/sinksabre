@@ -1,4 +1,4 @@
-package dev.toastbits
+package dev.toastbits.sinksabre
 
 import android.os.Bundle
 import androidx.activity.compose.setContent

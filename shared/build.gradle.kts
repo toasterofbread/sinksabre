@@ -10,6 +10,10 @@ kotlin {
     jvm("desktop")
 
     sourceSets {
+        all {
+            languageSettings.optIn("io.ktor.util.InternalAPI")
+        }
+
         val composekit_version: String = extra["composekit.version"] as String
         val ktor_version: String = extra["ktor.version"] as String
 

@@ -5,6 +5,7 @@ import dev.toatsbits.sinksabre.model.Song
 import dev.toastbits.sinksabre.platform.AppContext
 import dev.toastbits.sinksabre.settings.settings
 import dev.toastbits.composekit.utils.composable.OnChangedEffect
+import dev.toastbits.composekit.platform.PlatformFile
 import io.ktor.client.HttpClient
 import io.ktor.client.engine.cio.CIO
 import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
@@ -21,9 +22,7 @@ sealed interface SyncMethod {
     @Composable
     fun ConfigurationItems(context: AppContext, onModification: (SyncMethod) -> Unit)
 
-    suspend fun getSongList(): Result<List<Song>>
     suspend fun downloadSongs(
-        songs: List<Song>, 
         directory: PlatformFile,
         onProgress: (String) -> Unit
     ): Result<List<PlatformFile>>
