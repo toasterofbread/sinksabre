@@ -24,6 +24,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.Crossfade
 import dev.toastbits.composekit.utils.composable.AlignableCrossfade
+import dev.toastbits.composekit.utils.modifier.bounceOnClick
 
 private const val ICON_SIZE_DP: Float = 70f
 
@@ -45,7 +46,9 @@ fun BigButton(
 
     Card(
         onClick,
-        modifier,
+        modifier.thenIf(enabled) {
+            hover().bounceOnClick()
+        },
         shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(
             containerColor = container_colour,
@@ -118,3 +121,18 @@ fun Color.getContrasted(keep_alpha: Boolean = false): Color {
 
 fun Color.isDark(): Boolean =
     luminance() < 0.2
+
+private fun Modifier.hover(): Modifier = composed {
+    val interaction_source: MutableInteractionSource = remember { MutableInteractionSource() }
+    val hovered: Boolean by interaction_source.collectIsHoveredAsState()
+
+    val scale: Float by animateFloatAsState(
+        if (hovered) 1.05f else 1f,
+        animationSpec = tween(100)
+    )
+
+    return@composed this
+        .hoverable(interaction_source)
+        .scale(scale)
+        .pointerHoverIcon(PointerIcon.Hand)
+}
