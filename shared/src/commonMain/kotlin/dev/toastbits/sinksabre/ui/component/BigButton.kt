@@ -25,6 +25,16 @@ import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.Crossfade
 import dev.toastbits.composekit.utils.composable.AlignableCrossfade
 import dev.toastbits.composekit.utils.modifier.bounceOnClick
+import dev.toastbits.composekit.utils.common.thenIf
+import androidx.compose.animation.core.tween
+import androidx.compose.ui.composed
+import androidx.compose.foundation.hoverable
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsHoveredAsState
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.ui.draw.scale
+import androidx.compose.ui.input.pointer.PointerIcon
+import androidx.compose.ui.input.pointer.pointerHoverIcon
 
 private const val ICON_SIZE_DP: Float = 70f
 
@@ -127,7 +137,7 @@ private fun Modifier.hover(): Modifier = composed {
     val hovered: Boolean by interaction_source.collectIsHoveredAsState()
 
     val scale: Float by animateFloatAsState(
-        if (hovered) 1.05f else 1f,
+        if (hovered) 1.025f else 1f,
         animationSpec = tween(100)
     )
 

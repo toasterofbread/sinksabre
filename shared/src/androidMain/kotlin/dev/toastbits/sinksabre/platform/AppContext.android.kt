@@ -10,6 +10,7 @@ import android.app.Activity
 import kotlinx.coroutines.CoroutineScope
 import android.net.Uri
 import java.util.Timer
+import kotlin.concurrent.schedule
 
 actual class AppContext(
     val activity: Activity,
@@ -19,9 +20,9 @@ actual class AppContext(
 
     actual fun canLaunchBeatSaber(): Boolean = true
     actual fun launchBeatSaber(): Boolean {
+        val launch_intent: Intent = activity.getPackageManager().getLaunchIntentForPackage("com.beatgames.beatsaber") ?: return false
+
         activity.finish()
-        
-        val launch_intent: Intent = activity.getPackageManager().getLaunchIntentForPackage("com.beatgames.beatsaber")
 
         launch_intent.setFlags(
             Intent.FLAG_ACTIVITY_NEW_TASK or
