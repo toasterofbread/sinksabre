@@ -41,11 +41,13 @@ sealed interface SyncMethod {
     ): Result<Unit> = Result.failure(IllegalAccessException())
 
     enum class Type {
-        BEAT_SAVER_USER;
+        BEAT_SAVER_USER,
+        BEAT_SAVER_PLAYLIST;
 
         fun create(): SyncMethod =
             when (this) {
                 BEAT_SAVER_USER -> BeatSaverUserSyncMethod()
+                BEAT_SAVER_PLAYLIST -> BeatSaverPlaylistSyncMethod()
             }
     }
 
@@ -103,5 +105,6 @@ private fun String.decodeSyncMethod(): SyncMethod? =
 fun SyncMethod.Type?.getName(): String =
     when (this) {
         SyncMethod.Type.BEAT_SAVER_USER -> "BeatSaver user"
+        SyncMethod.Type.BEAT_SAVER_PLAYLIST -> "BeatSaver playlist"
         null -> "None"
     }

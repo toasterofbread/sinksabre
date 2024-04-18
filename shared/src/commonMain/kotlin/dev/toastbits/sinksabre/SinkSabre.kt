@@ -221,7 +221,7 @@ private fun State.MenuButtonsRow(modifier: Modifier = Modifier) {
                     Text("Close")
                 }
                 else {
-                    Text("View songs")
+                    Text("View maps")
                 }
             }
         }

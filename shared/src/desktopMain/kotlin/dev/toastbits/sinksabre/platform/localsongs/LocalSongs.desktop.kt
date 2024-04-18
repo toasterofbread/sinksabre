@@ -7,7 +7,7 @@ import dev.toastbits.composekit.platform.PlatformFile
 
 actual object LocalSongs {
     private fun getLevelsDirectory(context: AppContext): PlatformFile =
-        PlatformFile(context.getFilesDir().resolve("songs"))
+        PlatformFile(context.getFilesDir().resolve("maps"))
 
     actual suspend fun getLocalSongs(context: AppContext): Result<List<LocalSong>?> = runCatching {
         val directory: PlatformFile = getLevelsDirectory(context)

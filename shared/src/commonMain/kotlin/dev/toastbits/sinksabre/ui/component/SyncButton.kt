@@ -151,7 +151,7 @@ fun SyncButton(
                         }
 
                     SyncType.UPLOAD -> {
-                        onProgress("Loading local songs")
+                        onProgress("Loading local maps")
 
                         val local_songs: List<LocalSong> = LocalSongs.getLocalSongs(context).getOrThrow() ?: emptyList()
 
@@ -159,7 +159,7 @@ fun SyncButton(
                             onProgress("No local songs found")
                         }
                         else {
-                            onProgress("Found ${local_songs.size} local songs")
+                            onProgress("Found ${local_songs.size} local maps")
                             method.uploadSongs(
                                 local_songs,
                                 onFractionalProgress = { sync_progress = it },

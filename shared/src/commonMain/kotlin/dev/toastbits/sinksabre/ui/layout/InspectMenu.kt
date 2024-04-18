@@ -112,10 +112,10 @@ fun InspectMenu(
             }
         ) {
             if (remote) {
-                Text("Inspect remote songs")
+                Text("Inspect remote maps")
             }
             else {
-                Text("Inspect local songs")
+                Text("Inspect local maps")
             }
         }
 
@@ -155,7 +155,7 @@ fun InspectMenu(
                                 horizontalArrangement = Arrangement.spacedBy(10.dp),
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
-                                Text("${state.size} songs")
+                                Text("${state.size} maps")
 
                                 Spacer(Modifier.fillMaxWidth().weight(1f))
 
@@ -164,7 +164,7 @@ fun InspectMenu(
                                         horizontalArrangement = Arrangement.spacedBy(10.dp),
                                         verticalAlignment = Alignment.CenterVertically
                                     ) {
-                                        Text("Only songs added this session")
+                                        Text("Only maps added this session")
 
                                         Switch(
                                             only_show_session_added,

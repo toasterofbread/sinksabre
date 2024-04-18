@@ -9,6 +9,6 @@ actual class AppContext: PlatformContext("SinkSabre", Object::class.java) {
 
     actual fun isRunningOnQuest(): Boolean = false
 
-    actual fun canLaunchBeatSaber(): Boolean = false
+    actual fun canLaunchBeatSaber(): Boolean = true
     actual fun launchBeatSaber(): Boolean { throw IllegalAccessException() }
 }
