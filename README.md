@@ -1,6 +1,6 @@
 # SinkSabre
 
-An alternative to the (recently removed) Beat Saber sync function provided by BMBF and BeatSaver for ~~Meta~~ Oculus Quest.
+An alternative to the (recently removed) Beat Saber sync function provided by BMBF and BeastSaber for ~~Meta~~ Oculus Quest.
 
 This is a [Compose Multiplatform](https://github.com/JetBrains/compose-multiplatform) application, and supports both **direct install to Quest** and **running on desktop** (tested on Linux only, but Windows should work in theory).
 
