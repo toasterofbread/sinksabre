@@ -6,7 +6,6 @@ import dev.toastbits.sinksabre.sync.SyncMethod
 import dev.toastbits.composekit.platform.PlatformFile
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
-import java.io.File
 import androidx.core.content.ContextCompat
 import androidx.core.app.ActivityCompat
 import android.Manifest
@@ -15,15 +14,6 @@ import android.content.Context
 import android.app.Activity
 
 actual object LocalSongs {
-    private fun getLevelsDirectory(context: AppContext): PlatformFile {
-        val file: File = File("/storage/emulated/0/ModData/com.beatgames.beatsaber/Mods/SongLoader/CustomLevels")
-        file.mkdirs()
-        return PlatformFile.fromFile(
-            file,
-            context
-        )
-    }
-
     actual suspend fun getLocalSongs(context: AppContext): Result<List<LocalSong>?> = withContext(Dispatchers.IO) { runCatching {
         val ctx: Activity = context.activity
 
@@ -32,7 +22,7 @@ actual object LocalSongs {
             return@runCatching null
         }
 
-        val directory: PlatformFile = getLevelsDirectory(context)
+        val directory: PlatformFile = getMapsDirectory(context)
         return@runCatching loadLocalSongsInDirectory(directory)
     } }
 
@@ -47,6 +37,6 @@ actual object LocalSongs {
             throw RuntimeException("Storage write permission not granted")
         }
 
-        return method.downloadSongs(getLevelsDirectory(context), onFractionalProgress, onProgress)
+        return method.downloadSongs(getMapsDirectory(context), onFractionalProgress, onProgress)
     }
 }

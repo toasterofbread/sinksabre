@@ -30,6 +30,8 @@ fun SettingsMenu(context: AppContext, modifier: Modifier = Modifier) {
 
         BooleanSettingsField(context.settings.SYNC_ON_START)
 
+        StringSettingsField(context.settings.LOCAL_MAPS_PATH)
+
         SyncMethodField(context)
     }
 }

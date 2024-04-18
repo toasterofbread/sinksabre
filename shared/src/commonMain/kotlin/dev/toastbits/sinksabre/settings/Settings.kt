@@ -12,6 +12,7 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
 import dev.toastbits.composekit.utils.composable.OnChangedEffect
+import dev.toastbits.composekit.platform.Platform
 
 val AppContext.settings: Settings
     get() = Settings(this)
@@ -22,6 +23,7 @@ class Settings(val context: AppContext) {
 
     val SYNC_ON_START: Field<Boolean> get() = PrefsField(Key.SYNC_ON_START)
     val SYNC_METHOD: Field<String> get() = PrefsField(Key.SYNC_METHOD)
+    val LOCAL_MAPS_PATH: Field<String> get() = PrefsField(Key.LOCAL_MAPS_PATH)
     val SCROLL_WARNING_DISMISSED: Field<Boolean> get() = PrefsField(Key.SCROLL_WARNING_DISMISSED)
 
     interface Field<T> {
@@ -51,12 +53,19 @@ class Settings(val context: AppContext) {
     enum class Key {
         SYNC_ON_START,
         SYNC_METHOD,
+        LOCAL_MAPS_PATH,
         SCROLL_WARNING_DISMISSED;
 
         fun getDefaultValue(context: AppContext): Any =
             when (this) {
                 SYNC_ON_START -> false
                 SYNC_METHOD -> ""
+                LOCAL_MAPS_PATH ->
+                    if (context.isRunningOnQuest()) "/storage/emulated/0/ModData/com.beatgames.beatsaber/Mods/SongLoader/CustomLevels"
+                    else when (Platform.current) {
+                        Platform.ANDROID -> "/storage/emulated/0/BeatSaberMaps"
+                        Platform.DESKTOP -> context.getFilesDir().resolve("maps").absolutePath
+                    }
                 SCROLL_WARNING_DISMISSED -> !context.isRunningOnQuest()
             }
     }

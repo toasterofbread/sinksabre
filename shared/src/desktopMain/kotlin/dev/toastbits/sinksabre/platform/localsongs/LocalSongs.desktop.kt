@@ -6,11 +6,8 @@ import dev.toastbits.sinksabre.sync.SyncMethod
 import dev.toastbits.composekit.platform.PlatformFile
 
 actual object LocalSongs {
-    private fun getLevelsDirectory(context: AppContext): PlatformFile =
-        PlatformFile(context.getFilesDir().resolve("maps"))
-
     actual suspend fun getLocalSongs(context: AppContext): Result<List<LocalSong>?> = runCatching {
-        val directory: PlatformFile = getLevelsDirectory(context)
+        val directory: PlatformFile = getMapsDirectory(context)
         return@runCatching loadLocalSongsInDirectory(directory)
     }
 
@@ -20,6 +17,6 @@ actual object LocalSongs {
         onFractionalProgress: (Float?) -> Unit,
         onProgress: (String) -> Unit
     ): Result<List<LocalSong>> {
-        return method.downloadSongs(getLevelsDirectory(context), onFractionalProgress, onProgress)
+        return method.downloadSongs(getMapsDirectory(context), onFractionalProgress, onProgress)
     }
 }

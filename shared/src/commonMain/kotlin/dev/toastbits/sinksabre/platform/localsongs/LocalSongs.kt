@@ -3,6 +3,7 @@ package dev.toastbits.sinksabre.platform.localsongs
 import dev.toatsbits.sinksabre.model.LocalSong
 import dev.toastbits.sinksabre.platform.AppContext
 import dev.toastbits.sinksabre.sync.SyncMethod
+import dev.toastbits.sinksabre.settings.settings
 import dev.toastbits.composekit.platform.PlatformFile
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
@@ -11,6 +12,7 @@ import kotlinx.coroutines.sync.withPermit
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.Dispatchers
+import java.io.File
 
 expect object LocalSongs {
     suspend fun getLocalSongs(context: AppContext): Result<List<LocalSong>?>
@@ -21,6 +23,15 @@ expect object LocalSongs {
         onFractionalProgress: (Float?) -> Unit = {},
         onProgress: (String) -> Unit
     ): Result<List<LocalSong>>
+}
+
+fun getMapsDirectory(context: AppContext): PlatformFile {
+    val file: File = File(context.settings.LOCAL_MAPS_PATH.get())
+    file.mkdirs()
+    return PlatformFile.fromFile(
+        file,
+        context
+    )
 }
 
 fun loadLocalSongFile(file: PlatformFile): LocalSong? {
