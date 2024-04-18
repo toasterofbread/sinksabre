@@ -11,3 +11,6 @@
 local.properties
 .vscode
 *.log
+
+androidApp/keystore.properties
+androidApp/main.keystore

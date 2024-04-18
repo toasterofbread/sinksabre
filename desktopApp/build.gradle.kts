@@ -5,6 +5,8 @@ plugins {
     id("org.jetbrains.compose")
 }
 
+val version_name: String = extra["sinksabre.version.name"] as String
+
 kotlin {
     jvm()
     sourceSets {
@@ -27,7 +29,7 @@ compose.desktop {
         nativeDistributions {
             targetFormats(TargetFormat.Deb)
             packageName = "KotlinMultiplatformComposeDesktopApplication"
-            packageVersion = "0.1.0"
+            packageVersion = version_name
         }
     }
 }
