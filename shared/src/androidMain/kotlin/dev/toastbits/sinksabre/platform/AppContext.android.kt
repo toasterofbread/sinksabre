@@ -7,6 +7,7 @@ import android.content.Context
 import android.content.Intent
 import android.content.ComponentName
 import android.app.Activity
+import android.os.Build
 import kotlinx.coroutines.CoroutineScope
 import android.net.Uri
 import java.util.Timer
@@ -17,6 +18,9 @@ actual class AppContext(
     coroutine_scope: CoroutineScope
 ): PlatformContext(activity, coroutine_scope) {
     actual fun getPrefs(): PlatformPreferences = PlatformPreferencesImpl.getInstance(ctx)
+
+    actual fun isRunningOnQuest(): Boolean =
+        Build.MODEL.contains("Quest")
 
     actual fun canLaunchBeatSaber(): Boolean = true
     actual fun launchBeatSaber(): Boolean {

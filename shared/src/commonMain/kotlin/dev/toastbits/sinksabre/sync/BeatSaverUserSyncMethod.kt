@@ -12,9 +12,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.foundation.layout.Column
 import dev.toastbits.sinksabre.ui.component.settingsfield.StringSettingsField
 import dev.toastbits.sinksabre.platform.AppContext
+import dev.toastbits.sinksabre.platform.localsongs.SongInfoData
 import dev.toastbits.composekit.utils.composable.OnChangedEffect
 import dev.toastbits.composekit.platform.PlatformFile
 import dev.toatsbits.sinksabre.model.Song
+import dev.toatsbits.sinksabre.model.BeatSaverSong
+import dev.toatsbits.sinksabre.model.LocalSong
 import dev.toastbits.sinksabre.settings.Settings
 import io.ktor.client.request.post
 import io.ktor.http.ContentType
@@ -31,6 +34,12 @@ import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
 import kotlinx.serialization.json.putJsonArray
 import kotlinx.serialization.json.addAll
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+import kotlinx.coroutines.sync.Semaphore
+import kotlinx.coroutines.sync.withPermit
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.coroutineScope
 
 @Serializable
 data class BeatSaverUserSyncMethod(
@@ -100,8 +109,170 @@ data class BeatSaverUserSyncMethod(
     }
 
     private data class Session(val cookie: String, val user_id: Int)
+
     @kotlinx.serialization.Transient
     private var session: Session? = null
+
+    override suspend fun getSongList(): Result<List<Song>> = runCatching {
+        val client: HttpClient = getClient()
+
+        val bookmarks_playlist: BeatSaverPlaylist = client.getBookmarksPlaylist()
+        val maps: List<BeatSaverMap> = client.getPlaylistMaps(bookmarks_playlist)
+
+        return@runCatching maps.map { it.toSong() }
+    }
+
+    override suspend fun downloadSongs(
+        directory: PlatformFile,
+        onFractionalProgress: (Float?) -> Unit,
+        onProgress: (String) -> Unit
+    ): Result<List<LocalSong>> = runCatching {
+        val client: HttpClient = getClient()
+
+        onProgress("Getting user session")
+        val session: Session = client.getSession()
+
+        onProgress("Getting bookmarks playlist")
+        val bookmarks_playlist: BeatSaverPlaylist = client.getBookmarksPlaylist()
+
+        onProgress("Getting bookmarks")
+        val all_maps: List<BeatSaverMap> = client.getPlaylistMaps(bookmarks_playlist)
+
+        val maps: List<BeatSaverMap> = all_maps.filter { map ->
+            for (version in map.versions) {
+                val files: List<PlatformFile> = directory.resolve(version.hash).listFiles() ?: emptyList()
+                if (files.any { it.name.endsWith(".zip") } || files.isEmpty()) {
+                    continue
+                }
+
+                return@filter false
+            }
+
+            return@filter true
+        }
+
+        onProgress("Downloading ${maps.size} maps (skipping ${all_maps.size - maps.size} already downloaded)")
+        onFractionalProgress(0f)
+
+        val added_songs: MutableList<LocalSong> = mutableListOf()
+
+        val semaphore: Semaphore = Semaphore(3)
+
+        coroutineScope {
+            for ((index, map) in maps.withIndex()) {
+                launch(Dispatchers.IO) {
+                    semaphore.withPermit {
+                        val progress_message_map: String = "${map.name} by ${map.uploader.name} (${index + 1} / ${maps.size})"
+                        onProgress("Downloading $progress_message_map")
+
+                        val version: BeatSaverMap.Version = map.versions.first()
+
+                        val map_dir: PlatformFile = directory.resolve(version.hash)
+
+                        check(map_dir.mkdirs()) { "Could not create map directory at '${map_dir.absolute_path}'" }
+
+                        val zip_file: PlatformFile = map_dir.resolve("${version.hash}.zip")
+
+                        val zip_data: ByteArray = client.get(version.downloadURL).readBytes()
+                        zip_file.outputStream().use { zip_output ->
+                            zip_output.write(zip_data)
+                        }
+
+                        var info_dat: String? = null
+
+                        onProgress("Extracting $progress_message_map")
+                        ZipInputStream(zip_file.inputStream()).use { zip_input ->
+                            var entry: ZipEntry? = zip_input.nextEntry
+                            while (entry != null) {
+                                val entry_file: PlatformFile = map_dir.resolve(entry.name.lowercase())
+                                if (entry.isDirectory) {
+                                    entry_file.mkdirs()
+                                }
+                                else {
+                                    entry_file.outputStream().use { entry_output ->
+                                        zip_input.copyTo(entry_output)
+                                    }
+
+                                    if (entry_file.name == "info.dat") {
+                                        entry_file.inputStream().reader().use {
+                                            info_dat = it.readText()
+                                        }
+                                    }
+                                }
+
+                                entry = zip_input.nextEntry
+                            }
+                        }
+
+                        val song_info: SongInfoData? = info_dat?.let { SongInfoData.fromString(it) }
+
+                        if (song_info != null) {
+                            added_songs.add(song_info.toLocalSong(map_dir))
+                        }
+                        else {
+                            added_songs.add(LocalSong(hash = version.hash))
+                        }
+
+                        zip_file.delete()
+
+                        onFractionalProgress(added_songs.size / maps.size.toFloat())
+                    }
+                }
+            }
+        }
+
+        return@runCatching added_songs
+    }
+
+    override fun canUploadSongs(): Boolean = true
+
+    override suspend fun uploadSongs(
+        songs: List<LocalSong>,
+        onFractionalProgress: (Float?) -> Unit,
+        onProgress: (String) -> Unit
+    ): Result<Unit> = runCatching {
+        val client: HttpClient = getClient()
+
+        onProgress("Getting user session")
+        val session: Session = client.getSession()
+
+        onProgress("Getting bookmarks playlist")
+        val bookmarks_playlist: BeatSaverPlaylist = client.getBookmarksPlaylist()
+
+        onProgress("Adding maps to bookmarks")
+
+        val hash_chunks: List<List<String>> = songs.map { it.hash }.chunked(100)
+
+        for ((index, chunk) in hash_chunks.withIndex()) {
+            onProgress("Adding maps to bookmarks (chunk ${index + 1} of ${hash_chunks.size})")
+
+            val response: HttpResponse =
+                client.post("https://beatsaver.com/api/playlists/id/${bookmarks_playlist.playlistId}/batch") {
+                    headers {
+                        append("Cookie", session.cookie)
+                    }
+
+                    contentType(ContentType.Application.Json)
+                    setBody(Json.encodeToString(
+                        buildJsonObject {
+                            putJsonArray("hashes") {
+                                addAll(chunk)
+                            }
+                            put("ignoreUnknown", true)
+                            put("inPlaylist", true)
+                            putJsonArray("keys") {}
+                        }
+                    ))
+                }
+        }
+    }
+
+    override fun toString(): String {
+        val pw: String =
+            if (password.isBlank()) "(blank)"
+            else "***"
+        return "BeatSaverUserSyncMethod(username=$username, password=$pw)"
+    }
 
     private suspend fun HttpClient.getSession(): Session {
         session?.also {
@@ -141,7 +312,9 @@ data class BeatSaverUserSyncMethod(
         return session!!
     }
 
-    private suspend fun HttpClient.getBookmarksPlaylist(session: Session): BeatSaverPlaylist {
+    private suspend fun HttpClient.getBookmarksPlaylist(): BeatSaverPlaylist {
+        val session: Session = getSession()
+
         val playlists_result: BeatSaverUserPlaylistsResponse =
             get("https://beatsaver.com/api/playlists/user/${session.user_id}/0") {
                 headers {
@@ -153,131 +326,35 @@ data class BeatSaverUserSyncMethod(
             ?: throw RuntimeException("Bookmarks playlist not found")
     }
 
-    override suspend fun downloadSongs(
-        directory: PlatformFile,
-        onProgress: (String) -> Unit
-    ): Result<List<PlatformFile>> = runCatching {
-        val client: HttpClient = getClient()
+    private suspend fun HttpClient.getPlaylistMaps(playlist: BeatSaverPlaylist): List<BeatSaverMap> {
+        val session: Session = getSession()
 
-        onProgress("Getting user session")
-        val session: Session = client.getSession()
+        val bookmarks_playlist: BeatSaverPlaylist = getBookmarksPlaylist()
 
-        onProgress("Getting bookmarks playlist")
-        val bookmarks_playlist: BeatSaverPlaylist = client.getBookmarksPlaylist(session)
+        val maps: MutableList<BeatSaverMap> = mutableListOf()
+        var playlist_size: Int
+        var page: Int = 0
 
-        onProgress("Getting bookmarks")
-        val bookmarks_result: BeatSaverPlaylistResponse =
-            client.get("https://beatsaver.com/api/playlists/id/${bookmarks_playlist.playlistId}/0") {
-                headers {
-                    append("Cookie", session.cookie)
-                }
-            }.body()
+        do {
+            val bookmarks_result: BeatSaverPlaylistResponse = getPlaylistPage(bookmarks_playlist, page++)
+            playlist_size = bookmarks_result.playlist.stats.totalMaps
 
-        val maps: List<BeatSaverMap> =
-            bookmarks_result.maps.mapNotNull {
-                val map: BeatSaverMap = it.map
-                val version: BeatSaverMap.Version =
-                    map.versions.firstOrNull()
-                    ?: return@mapNotNull null
-
-                if (directory.resolve(version.hash).exists) {
-                    return@mapNotNull null
-                }
-                return@mapNotNull map
+            for (map in bookmarks_result.maps) {
+                maps.add(map.map)
             }
-
-        onProgress("Downloading ${maps.size} maps")
-
-        val added_maps: MutableList<PlatformFile> = mutableListOf()
-
-        for ((index, map) in maps.withIndex()) {
-            val progress_message_map: String = "${map.name} by ${map.uploader.name} (${index + 1} / ${maps.size})"
-            onProgress("Downloading $progress_message_map")
-
-            val version: BeatSaverMap.Version = map.versions.first()
-
-            val map_dir: PlatformFile = directory.resolve(version.hash)
-
-            check(map_dir.mkdirs()) { "Could not create map directory at '${map_dir.absolute_path}'" }
-
-            val zip_file: PlatformFile = map_dir.resolve("${version.hash}.zip")
-
-            val zip_data: ByteArray = client.get(version.downloadURL).readBytes()
-            zip_file.outputStream().use { zip_output ->
-                zip_output.write(zip_data)
-            }
-
-            onProgress("Extracting $progress_message_map")
-            ZipInputStream(zip_file.inputStream()).use { zip_input ->
-                var entry: ZipEntry? = zip_input.nextEntry
-                while (entry != null) {
-                    val entry_file: PlatformFile = map_dir.resolve(entry.name)
-                    if (entry.isDirectory) {
-                        entry_file.mkdirs()
-                    }
-                    else {
-                        entry_file.outputStream().use { entry_output ->
-                            zip_input.copyTo(entry_output)
-                        }
-                    }
-                    entry = zip_input.nextEntry
-                }
-            }
-
-            added_maps.add(map_dir)
-            zip_file.delete()
         }
+        while (maps.size < playlist_size)
 
-        return@runCatching added_maps
+        return maps.filter { it.versions.isNotEmpty() }
     }
 
-    override fun canUploadSongs(): Boolean = true
-
-    override suspend fun uploadSongs(
-        songs: List<Song>,
-        onProgress: (String) -> Unit
-    ): Result<Unit> = runCatching {
-        val client: HttpClient = getClient()
-
-        onProgress("Getting user session")
-        val session: Session = client.getSession()
-
-        onProgress("Getting bookmarks playlist")
-        val bookmarks_playlist: BeatSaverPlaylist = client.getBookmarksPlaylist(session)
-
-        onProgress("Adding maps to bookmarks")
-
-        val hash_chunks: List<List<String>> = songs.map { it.hash }.chunked(100)
-
-        for ((index, chunk) in hash_chunks.withIndex()) {
-            onProgress("Adding maps to bookmarks (chunk ${index + 1} of ${hash_chunks.size})")
-
-            val response: HttpResponse =
-                client.post("https://beatsaver.com/api/playlists/id/${bookmarks_playlist.playlistId}/batch") {
-                    headers {
-                        append("Cookie", session.cookie)
-                    }
-
-                    contentType(ContentType.Application.Json)
-                    setBody(Json.encodeToString(
-                        buildJsonObject {
-                            putJsonArray("hashes") {
-                                addAll(chunk)
-                            }
-                            put("ignoreUnknown", true)
-                            put("inPlaylist", true)
-                            putJsonArray("keys") {}
-                        }
-                    ))
-                }
-        }
-    }
-
-    override fun toString(): String {
-        val pw: String =
-            if (password.isBlank()) "(blank)"
-            else "***"
-        return "BeatSaverUserSyncMethod(username=$username, password=$pw)"
+    private suspend fun HttpClient.getPlaylistPage(playlist: BeatSaverPlaylist, page: Int): BeatSaverPlaylistResponse {
+        val session: Session = getSession()
+        return get("https://beatsaver.com/api/playlists/id/${playlist.playlistId}/$page") {
+            headers {
+                append("Cookie", session.cookie)
+            }
+        }.body()
     }
 }
 
@@ -285,7 +362,10 @@ data class BeatSaverUserSyncMethod(
 private data class BeatSaverUserPlaylistsResponse(val docs: List<BeatSaverPlaylist>)
 
 @Serializable
-private data class BeatSaverPlaylistResponse(val playlist: BeatSaverPlaylist, val maps: List<MapContainer>) {
+private data class BeatSaverPlaylistResponse(
+    val playlist: BeatSaverPlaylist,
+    val maps: List<MapContainer>
+) {
     @Serializable
     data class MapContainer(val map: BeatSaverMap)
 }
@@ -293,9 +373,13 @@ private data class BeatSaverPlaylistResponse(val playlist: BeatSaverPlaylist, va
 @Serializable
 private data class BeatSaverPlaylist(
     val playlistId: Int,
-    val type: String
+    val type: String,
+    val stats: Stats
 ) {
     fun isSystemPlaylist(): Boolean = type == "System"
+
+    @Serializable
+    data class Stats(val totalMaps: Int)
 }
 
 @Serializable
@@ -311,8 +395,33 @@ private data class BeatSaverMap(
     val name: String,
     val description: String,
     val uploader: BeatSaverUserResponse,
-    val versions: List<Version>
+    val versions: List<Version>,
+    val metadata: Metadata
 ) {
     @Serializable
-    data class Version(val hash: String, val downloadURL: String)
+    data class Version(
+        val hash: String,
+        val downloadURL: String,
+        val coverURL: String,
+        val previewURL: String
+    )
+
+    @Serializable
+    data class Metadata(val bpm: Float)
+
+    fun toSong(): BeatSaverSong =
+        BeatSaverSong(
+            id = id,
+            versions.map { version ->
+                BeatSaverSong.Version(
+                    hash = version.hash,
+                    download_url = version.downloadURL,
+                    image_url = version.coverURL,
+                    preview_url = version.previewURL
+                )
+            },
+            name = name,
+            mapper_name = uploader.name,
+            bpm = metadata.bpm
+        )
 }

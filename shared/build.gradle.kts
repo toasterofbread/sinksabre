@@ -31,6 +31,7 @@ kotlin {
                 implementation("io.ktor:ktor-client-cio:$ktor_version")
                 implementation("io.ktor:ktor-client-content-negotiation:$ktor_version")
                 implementation("io.ktor:ktor-serialization-kotlinx-json:$ktor_version")
+                implementation("media.kamel:kamel-image:0.9.4")
             }
         }
         val androidMain by getting {

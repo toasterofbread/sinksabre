@@ -1,8 +1,10 @@
 package dev.toastbits.sinksabre.ui.component
 
 import androidx.compose.runtime.*
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.material3.Text
 import androidx.compose.material3.LocalContentColor
+import androidx.compose.material3.Icon
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.Modifier
@@ -30,7 +32,7 @@ import dev.toastbits.composekit.utils.composable.NullCrossfade
 import dev.toastbits.composekit.utils.composable.SubtleLoadingIndicator
 import dev.toastbits.composekit.platform.PlatformFile
 import dev.toastbits.composekit.platform.composable.ScrollBarLazyColumn
-import dev.toatsbits.sinksabre.model.Song
+import dev.toatsbits.sinksabre.model.LocalSong
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 import androidx.compose.foundation.horizontalScroll
@@ -62,12 +64,12 @@ enum class SyncType {
     fun getColour(): Color =
         when (this) {
             DOWNLOAD -> Color(0xFFE5446D)
-            UPLOAD -> Color(0xFFE5446D)
+            UPLOAD -> Color(0xFF6279bf)
         }
 
     fun getIcon(): ImageVector =
         when (this) {
-            DOWNLOAD -> Icons.Default.Refresh
+            DOWNLOAD -> Icons.Default.Download
             UPLOAD -> Icons.Default.CloudUpload
         }
 }
@@ -76,7 +78,9 @@ enum class SyncType {
 fun SyncButton(
     context: AppContext,
     modifier: Modifier = Modifier,
-    onShowingContentChanged: (Boolean) -> Unit = {}
+    onSongsAdded: ((List<LocalSong>) -> Unit)? = null,
+    onShowingContentChanged: (Boolean) -> Unit = {},
+    onSyncingChanged: (Boolean) -> Unit = {}
 ) {
     val coroutine_scope: CoroutineScope = rememberCoroutineScope()
     val outer_content_colour: Color = LocalContentColor.current
@@ -88,6 +92,7 @@ fun SyncButton(
     var current_sync_type: SyncType? by remember { mutableStateOf(null) }
 
     var sync_log: String by remember { mutableStateOf("") }
+    var sync_progress: Float? by remember { mutableStateOf(null) }
 
     val showing_content: Boolean by remember { derivedStateOf {
         current_sync_type != null || sync_error != null || sync_log.isNotEmpty()
@@ -95,6 +100,10 @@ fun SyncButton(
 
     LaunchedEffect(showing_content) {
         onShowingContentChanged(showing_content)
+    }
+
+    LaunchedEffect(syncing) {
+        onSyncingChanged(syncing)
     }
 
     fun onProgress(message: String) {
@@ -129,13 +138,34 @@ fun SyncButton(
             try {
                 when (type) {
                     SyncType.DOWNLOAD ->
-                        LocalSongs.downloadToLocalSongs(method, context, { onProgress(it) }).getOrThrow()
+                        {
+                            val added_songs: List<LocalSong> =
+                                LocalSongs.downloadToLocalSongs(
+                                    method,
+                                    context,
+                                    onFractionalProgress = { sync_progress = it },
+                                    onProgress = { onProgress(it) }
+                                ).getOrThrow()
+
+                            onSongsAdded?.invoke(added_songs)
+                        }
 
                     SyncType.UPLOAD -> {
                         onProgress("Loading local songs")
 
-                        val local_songs: List<Song> = LocalSongs.getLocalSongs(context).getOrThrow() ?: emptyList()
-                        method.uploadSongs(local_songs, { onProgress(it) }).getOrThrow()
+                        val local_songs: List<LocalSong> = LocalSongs.getLocalSongs(context).getOrThrow() ?: emptyList()
+
+                        if (local_songs.isEmpty()) {
+                            onProgress("No local songs found")
+                        }
+                        else {
+                            onProgress("Found ${local_songs.size} local songs")
+                            method.uploadSongs(
+                                local_songs,
+                                onFractionalProgress = { sync_progress = it },
+                                onProgress = { onProgress(it) }
+                            ).getOrThrow()
+                        }
                     }
                 }
 
@@ -150,6 +180,7 @@ fun SyncButton(
             }
             finally {
                 syncing = false
+                sync_progress = null
             }
         }
     }
@@ -160,72 +191,91 @@ fun SyncButton(
         }
     }
 
-    Row(
+    Column(
         modifier,
-        horizontalArrangement = Arrangement.spacedBy(10.dp)
+        verticalArrangement = Arrangement.spacedBy(10.dp)
     ) {
-        val fill_weight: Float by animateFloatAsState(if (current_sync_type == null) 1f else Float.MAX_VALUE)
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(10.dp)
+        ) {
+            CompositionLocalProvider(LocalContentColor provides LocalContentColor.current.copy(alpha = 0.5f)) {
+                Icon(Icons.Default.Refresh, null)
+                Text("Sync")
+            }
+        }
 
-        for (type in SyncType.entries) {
-            AnimatedVisibility(
-                type.isAvailable(sync_method) && (!syncing || current_sync_type == type),
-                Modifier.fillMaxWidth().weight(if (current_sync_type == type) fill_weight else 1f),
-                exit = shrinkHorizontally()
-            ) {
-                BigButton(
-                    {
-                        performSync(type)
-                    },
-                    type.getColour(),
-                    icon = type.getIcon(),
-                    full_content = showing_content,
-                    enabled = sync_method?.isConfigured() == true || sync_error != null || sync_log.isNotEmpty(),
-                    disabledContent = {
-                        Text("Sync method not configured")
-                    }
+        Row(
+            modifier,
+            horizontalArrangement = Arrangement.spacedBy(10.dp)
+        ) {
+            val fill_weight: Float by animateFloatAsState(if (current_sync_type == null) 1f else Float.MAX_VALUE)
+
+            for (type in SyncType.entries) {
+                AnimatedVisibility(
+                    type.isAvailable(sync_method) && (!syncing || current_sync_type == type),
+                    Modifier.fillMaxWidth().weight(if (current_sync_type == type) fill_weight else 1f),
+                    exit = shrinkHorizontally()
                 ) {
-                    AlignableCrossfade(
-                        sync_error ?: if (syncing) true else if (current_sync_type == type) sync_log.takeIf { it.isNotEmpty() } else null,
-                        contentAlignment = Alignment.Center
-                    ) { state ->
-                        if (state is Throwable) {
-                            Column {
-                                Text("Sync failed")
-                                Text(
-                                    remember(state) { state.stackTraceToString() },
-                                    Modifier
-                                        .horizontalScroll(rememberScrollState())
-                                        .verticalScroll(rememberScrollState())
-                                )
-                            }
-                        }
-                        else if ((state as? Boolean) == true) {
-                            SyncLog(sync_log, true, Modifier.fillMaxSize())
-                        }
-                        else if (state is String) {
-                            SyncLog(state, false, Modifier.fillMaxSize()) {
-                                Column(
-                                    Modifier
-                                        .padding(top = 10.dp)
-                                        .fillMaxWidth()
-                                        .background(outer_content_colour.getContrasted()),
-                                    horizontalAlignment = Alignment.CenterHorizontally,
-                                    verticalArrangement = Arrangement.spacedBy(10.dp)
-                                ) {
+                    BigButton(
+                        {
+                            performSync(type)
+                        },
+                        type.getColour(),
+                        icon = type.getIcon(),
+                        full_content = showing_content,
+                        enabled = sync_method?.isConfigured() == true,
+                        clickable = sync_method?.isConfigured() == true && (sync_error != null || sync_log.isEmpty() || !syncing),
+                        disabledContent = {
+                            Text("Sync method not configured")
+                        },
+                        bar_progress =
+                            if (type == current_sync_type) sync_progress
+                            else null
+                    ) {
+                        AlignableCrossfade(
+                            sync_error ?: if (syncing) true else if (type == current_sync_type) sync_log.takeIf { it.isNotEmpty() } else null,
+                            contentAlignment = Alignment.Center
+                        ) { state ->
+                            if (state is Throwable) {
+                                Column {
+                                    Text("Sync failed")
                                     Text(
-                                        "Sync completed",
-                                        color = outer_content_colour
-                                    )
-                                    Text(
-                                        "Press to dimsiss",
-                                        color = outer_content_colour.copy(alpha = 0.5f),
-                                        fontSize = 15.sp
+                                        remember(state) { state.stackTraceToString() },
+                                        Modifier
+                                            .horizontalScroll(rememberScrollState())
+                                            .verticalScroll(rememberScrollState())
                                     )
                                 }
                             }
-                        }
-                        else {
-                            Text(type.getLabel())
+                            else if ((state as? Boolean) == true) {
+                                SyncLog(sync_log, true, Modifier.fillMaxSize())
+                            }
+                            else if (state is String) {
+                                SyncLog(state, false, Modifier.fillMaxSize()) {
+                                    Column(
+                                        Modifier
+                                            .padding(top = 10.dp)
+                                            .fillMaxWidth()
+                                            .background(outer_content_colour.getContrasted()),
+                                        horizontalAlignment = Alignment.CenterHorizontally,
+                                        verticalArrangement = Arrangement.spacedBy(10.dp)
+                                    ) {
+                                        Text(
+                                            "Sync completed",
+                                            color = outer_content_colour
+                                        )
+                                        Text(
+                                            "Press to dimsiss",
+                                            color = outer_content_colour.copy(alpha = 0.5f),
+                                            fontSize = 15.sp
+                                        )
+                                    }
+                                }
+                            }
+                            else {
+                                Text(type.getLabel())
+                            }
                         }
                     }
                 }
@@ -263,7 +313,7 @@ private fun SyncLog(
                 Text(
                     line,
                     textAlign = TextAlign.Start,
-                    fontSize = 20.sp
+                    fontSize = 16.sp
                 )
 
                 if (running && index == last_empty_line) {

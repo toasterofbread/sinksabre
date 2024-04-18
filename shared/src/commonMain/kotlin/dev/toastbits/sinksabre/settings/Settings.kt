@@ -22,6 +22,7 @@ class Settings(val context: AppContext) {
 
     val SYNC_ON_START: Field<Boolean> get() = PrefsField(Key.SYNC_ON_START)
     val SYNC_METHOD: Field<String> get() = PrefsField(Key.SYNC_METHOD)
+    val SCROLL_WARNING_DISMISSED: Field<Boolean> get() = PrefsField(Key.SCROLL_WARNING_DISMISSED)
 
     interface Field<T> {
         fun get(): T
@@ -49,17 +50,19 @@ class Settings(val context: AppContext) {
 
     enum class Key {
         SYNC_ON_START,
-        SYNC_METHOD;
+        SYNC_METHOD,
+        SCROLL_WARNING_DISMISSED;
 
-        fun getDefaultValue(): Any =
+        fun getDefaultValue(context: AppContext): Any =
             when (this) {
                 SYNC_ON_START -> false
                 SYNC_METHOD -> ""
+                SCROLL_WARNING_DISMISSED -> !context.isRunningOnQuest()
             }
     }
 
     fun <T> get(key: Key, preferences: PlatformPreferences = prefs, default: T? = null): T {
-        val default_value: T = default ?: (key.getDefaultValue() as T)
+        val default_value: T = default ?: (key.getDefaultValue(context) as T)
         return when (default_value) {
             is Boolean -> preferences.getBoolean(key.name, default_value as Boolean)
             is Float -> preferences.getFloat(key.name, default_value as Float)

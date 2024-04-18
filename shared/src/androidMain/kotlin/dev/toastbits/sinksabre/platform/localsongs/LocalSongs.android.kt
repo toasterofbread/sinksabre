@@ -6,10 +6,7 @@ import dev.toastbits.sinksabre.sync.SyncMethod
 import dev.toastbits.composekit.platform.PlatformFile
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
-import kotlinx.serialization.Serializable
-import kotlinx.serialization.json.Json
 import java.io.File
-import android.os.Environment
 import androidx.core.content.ContextCompat
 import androidx.core.app.ActivityCompat
 import android.Manifest
@@ -18,11 +15,14 @@ import android.content.Context
 import android.app.Activity
 
 actual object LocalSongs {
-    private fun getLevelsDirectory(context: AppContext): PlatformFile =
-        PlatformFile.fromFile(
-            File("/storage/emulated/0/ModData/com.beatgames.beatsaber/Mods/SongLoader/CustomLevels"),
+    private fun getLevelsDirectory(context: AppContext): PlatformFile {
+        val file: File = File("/storage/emulated/0/ModData/com.beatgames.beatsaber/Mods/SongLoader/CustomLevels")
+        file.mkdirs()
+        return PlatformFile.fromFile(
+            file,
             context
         )
+    }
 
     actual suspend fun getLocalSongs(context: AppContext): Result<List<LocalSong>?> = withContext(Dispatchers.IO) { runCatching {
         val ctx: Activity = context.activity
@@ -33,68 +33,20 @@ actual object LocalSongs {
         }
 
         val directory: PlatformFile = getLevelsDirectory(context)
-        val levels: List<PlatformFile> = directory.listFiles() ?: emptyList()
-
-        return@runCatching levels.mapNotNull { level ->
-            if (!level.is_directory) {
-                return@mapNotNull null
-            }
-
-            val info_file: PlatformFile? = level.listFiles()?.firstOrNull { it.name.lowercase() == "info.dat" }
-            if (info_file?.is_file != true) {
-                return@mapNotNull null
-            }
-
-            val info_text: String =
-                info_file.inputStream().reader().use {
-                    it.readText()
-                }
-
-            val song_info: SongInfo = Json {
-                ignoreUnknownKeys = true
-                explicitNulls = false
-            }.decodeFromString(info_text)
-
-            return@mapNotNull with (song_info) {
-                LocalSong(
-                    hash = level.name,
-                    name = _songName.fullOrNull(),
-                    subname = _songSubName.fullOrNull(),
-                    artist_name = _songAuthorName.fullOrNull(),
-                    mapper_name = _levelAuthorName.fullOrNull(),
-                    bpm = _beatsPerMinute,
-                    image_file = _coverImageFilename.fullOrNull()?.let { level.resolve(it) },
-                    audio_file = _songFilename.fullOrNull()?.let { level.resolve(it) }
-                )
-            }
-        }
+        return@runCatching loadLocalSongsInDirectory(directory)
     } }
 
     actual suspend fun downloadToLocalSongs(
         method: SyncMethod,
         context: AppContext,
+        onFractionalProgress: (Float?) -> Unit,
         onProgress: (String) -> Unit
-    ): Result<List<PlatformFile>> {
+    ): Result<List<LocalSong>> {
         if (ContextCompat.checkSelfPermission(context.activity, Manifest.permission.WRITE_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED) {
             ActivityCompat.requestPermissions(context.activity, arrayOf(Manifest.permission.WRITE_EXTERNAL_STORAGE), PackageManager.PERMISSION_GRANTED)
             throw RuntimeException("Storage write permission not granted")
         }
 
-        return method.downloadSongs(getLevelsDirectory(context), onProgress)
+        return method.downloadSongs(getLevelsDirectory(context), onFractionalProgress, onProgress)
     }
 }
-
-private fun String.fullOrNull(): String? =
-    if (isBlank()) null
-    else this
-
-@Serializable
-private data class SongInfo(
-    val _songName: String,
-    val _songSubName: String,
-    val _songAuthorName: String,
-    val _levelAuthorName: String,
-    val _beatsPerMinute: Float,
-    val _songFilename: String,
-    val _coverImageFilename: String
-)

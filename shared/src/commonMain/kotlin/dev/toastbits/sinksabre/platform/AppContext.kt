@@ -6,6 +6,8 @@ import dev.toastbits.composekit.platform.PlatformPreferences
 expect class AppContext: PlatformContext {
     fun getPrefs(): PlatformPreferences
 
+    fun isRunningOnQuest(): Boolean
+
     fun canLaunchBeatSaber(): Boolean
     fun launchBeatSaber(): Boolean
 }

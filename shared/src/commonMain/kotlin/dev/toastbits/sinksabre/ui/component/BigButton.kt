@@ -9,12 +9,18 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.Icon
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.LocalTextStyle
+import androidx.compose.material3.LinearProgressIndicator
+import androidx.compose.material3.LocalContentColor
+import androidx.compose.material3.Text
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.graphics.Color
@@ -24,7 +30,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.Crossfade
 import dev.toastbits.composekit.utils.composable.AlignableCrossfade
-import dev.toastbits.composekit.utils.modifier.bounceOnClick
+import dev.toastbits.composekit.utils.composable.NullableValueAnimatedVisibility
 import dev.toastbits.composekit.utils.common.thenIf
 import androidx.compose.animation.core.tween
 import androidx.compose.ui.composed
@@ -44,8 +50,11 @@ fun BigButton(
     colour: Color,
     modifier: Modifier = Modifier,
     icon: ImageVector? = null,
+    icon_scale: Float = 1f,
     enabled: Boolean = true,
+    clickable: Boolean = enabled,
     full_content: Boolean = false,
+    bar_progress: Float? = null,
     disabledContent: (@Composable () -> Unit)? = null,
     content: (@Composable () -> Unit)? = null
 ) {
@@ -56,37 +65,74 @@ fun BigButton(
 
     Card(
         onClick,
-        modifier.thenIf(enabled) {
-            hover().bounceOnClick()
+        modifier.thenIf(clickable) {
+            hover()
         },
         shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = container_colour,
-            contentColor = colour.getContrasted()
-        ),
-        enabled = enabled
+        colors =
+            if (enabled && !clickable)
+                CardDefaults.cardColors(
+                    containerColor = container_colour,
+                    disabledContainerColor = container_colour,
+                    contentColor = colour.getContrasted(),
+                    disabledContentColor = colour.getContrasted()
+                )
+            else
+                CardDefaults.cardColors(
+                    containerColor = container_colour,
+                    contentColor = colour.getContrasted(),
+                ),
+        enabled = clickable
     ) {
         BoxWithConstraints(
             Modifier.fillMaxSize().padding(10.dp),
             contentAlignment = Alignment.Center
         ) {
-            val icon_size: Dp = ICON_SIZE_DP.dp
+            val icon_size: Dp = ICON_SIZE_DP.dp * icon_scale
             val icon_center_alignment: Alignment? =
-                if (maxWidth < icon_size * 2 && maxHeight < icon_size * 2) Alignment.Center
+                if (content == null || (maxWidth < icon_size * 2 && maxHeight < icon_size * 2)) Alignment.Center
                 else if (maxWidth < icon_size * 2) Alignment.TopCenter
                 else if (maxHeight < icon_size * 2) Alignment.CenterStart
                 else null
 
-            Crossfade(
-                icon,
-                Modifier.align(icon_center_alignment ?: Alignment.TopStart)
+            Row(
+                Modifier.align(icon_center_alignment ?: Alignment.TopStart),
+                horizontalArrangement = Arrangement.spacedBy(10.dp),
+                verticalAlignment = Alignment.Bottom
             ) {
-                if (it != null) {
-                    Icon(
-                        it,
-                        null,
-                        Modifier.size(icon_size)
-                    )
+                Crossfade(icon) {
+                    if (it != null) {
+                        Icon(
+                            it,
+                            null,
+                            Modifier.size(icon_size)
+                        )
+                    }
+                }
+
+                NullableValueAnimatedVisibility(bar_progress) {
+                    if (it == null) {
+                        return@NullableValueAnimatedVisibility
+                    }
+
+                    val progress: Float by animateFloatAsState(it)
+
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(5.dp)
+                    ) {
+                        Text(
+                            (progress * 100).toInt().toString() + "%",
+                            Modifier.padding(bottom = 5.dp),
+                            fontSize = 12.sp
+                        )
+
+                        LinearProgressIndicator(
+                            progress = progress,
+                            color = LocalContentColor.current,
+                            modifier = Modifier.fillMaxWidth().weight(1f)
+                        )
+                    }
                 }
             }
 
