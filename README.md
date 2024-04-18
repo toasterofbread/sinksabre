@@ -17,6 +17,19 @@ This is a [Compose Multiplatform](https://github.com/JetBrains/compose-multiplat
 > [!NOTE]
 > BeatSaver accounts registered using Discord cannot be used. Sync using a playlist instead.
 
+## Installation
+
+### Quest / Android
+
+1. Download the appropriate APK for your device from the [releases page](https://github.com/toasterofbread/sinksabre/releases)
+2. Install using ADB or Sidequest
+
+### Desktop
+
+A binary release for desktop platforms is not currently provided.
+
+The desktop application can be started from the project source code using the `desktopApp:run` Gradle task.
+
 ## Screenshots
 
 ![](readme/screenshot0.png)
