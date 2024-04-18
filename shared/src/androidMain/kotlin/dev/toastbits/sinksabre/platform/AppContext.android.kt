@@ -9,6 +9,7 @@ import android.content.ComponentName
 import android.app.Activity
 import kotlinx.coroutines.CoroutineScope
 import android.net.Uri
+import java.util.Timer
 
 actual class AppContext(
     val activity: Activity,
@@ -18,10 +19,23 @@ actual class AppContext(
 
     actual fun canLaunchBeatSaber(): Boolean = true
     actual fun launchBeatSaber(): Boolean {
-        // Why does this work for BMBF2 but not this?
-        val launch_intent: Intent = Intent()
-        launch_intent.setComponent(ComponentName("com.beatgames.beatsaber", "com.unity3d.player.UnityPlayerActivity"))
-        activity.startActivity(launch_intent)
+        activity.finish()
+        
+        val launch_intent: Intent = activity.getPackageManager().getLaunchIntentForPackage("com.beatgames.beatsaber")
+
+        launch_intent.setFlags(
+            Intent.FLAG_ACTIVITY_NEW_TASK or
+            Intent.FLAG_ACTIVITY_NEW_DOCUMENT or
+            Intent.FLAG_ACTIVITY_MULTIPLE_TASK
+        )
+
+        Timer().schedule(650) {
+            activity.startActivity(launch_intent)
+        }
+        Timer().schedule(800) {
+            activity.startActivity(launch_intent)
+        }
+
         return true
     }
 }
