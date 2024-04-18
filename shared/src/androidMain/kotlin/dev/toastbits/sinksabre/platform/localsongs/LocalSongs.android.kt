@@ -57,7 +57,7 @@ actual object LocalSongs {
 
             return@mapNotNull with (song_info) {
                 LocalSong(
-                    id = level.name,
+                    hash = level.name,
                     name = _songName.fullOrNull(),
                     subname = _songSubName.fullOrNull(),
                     artist_name = _songAuthorName.fullOrNull(),
@@ -70,7 +70,7 @@ actual object LocalSongs {
         }
     } }
 
-    actual suspend fun syncToLocalSongs(
+    actual suspend fun downloadToLocalSongs(
         method: SyncMethod,
         context: AppContext,
         onProgress: (String) -> Unit

@@ -27,6 +27,12 @@ sealed interface SyncMethod {
         onProgress: (String) -> Unit
     ): Result<List<PlatformFile>>
 
+    fun canUploadSongs(): Boolean = false
+    suspend fun uploadSongs(
+        songs: List<Song>,
+        onProgress: (String) -> Unit
+    ): Result<Unit> = Result.failure(IllegalAccessException())
+
     enum class Type {
         BEAT_SAVER_USER;
 

@@ -8,7 +8,7 @@ import dev.toastbits.composekit.platform.composable.rememberImagePainter
 import dev.toastbits.composekit.platform.PlatformFile
 
 data class LocalSong(
-    override val id: String,
+    override val hash: String,
     override val name: String? = null,
     override val subname: String? = null,
     override val artist_name: String? = null,

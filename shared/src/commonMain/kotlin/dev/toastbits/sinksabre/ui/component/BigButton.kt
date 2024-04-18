@@ -36,7 +36,7 @@ import androidx.compose.ui.draw.scale
 import androidx.compose.ui.input.pointer.PointerIcon
 import androidx.compose.ui.input.pointer.pointerHoverIcon
 
-private const val ICON_SIZE_DP: Float = 70f
+private const val ICON_SIZE_DP: Float = 60f
 
 @Composable
 fun BigButton(

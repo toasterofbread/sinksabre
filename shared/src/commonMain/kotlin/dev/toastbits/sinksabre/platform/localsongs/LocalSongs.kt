@@ -7,5 +7,5 @@ import dev.toastbits.composekit.platform.PlatformFile
 
 expect object LocalSongs {
     suspend fun getLocalSongs(context: AppContext): Result<List<LocalSong>?>
-    suspend fun syncToLocalSongs(method: SyncMethod, context: AppContext, onProgress: (String) -> Unit): Result<List<PlatformFile>>
+    suspend fun downloadToLocalSongs(method: SyncMethod, context: AppContext, onProgress: (String) -> Unit): Result<List<PlatformFile>>
 }

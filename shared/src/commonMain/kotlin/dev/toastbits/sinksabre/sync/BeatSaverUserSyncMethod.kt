@@ -27,6 +27,10 @@ import io.ktor.utils.io.copyAndClose
 import java.util.zip.ZipEntry
 import java.util.zip.ZipInputStream
 import java.io.File
+import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.put
+import kotlinx.serialization.json.putJsonArray
+import kotlinx.serialization.json.addAll
 
 @Serializable
 data class BeatSaverUserSyncMethod(
@@ -137,6 +141,18 @@ data class BeatSaverUserSyncMethod(
         return session!!
     }
 
+    private suspend fun HttpClient.getBookmarksPlaylist(session: Session): BeatSaverPlaylist {
+        val playlists_result: BeatSaverUserPlaylistsResponse =
+            get("https://beatsaver.com/api/playlists/user/${session.user_id}/0") {
+                headers {
+                    append("Cookie", session.cookie)
+                }
+            }.body()
+
+        return playlists_result.docs.firstOrNull { it.isSystemPlaylist() }
+            ?: throw RuntimeException("Bookmarks playlist not found")
+    }
+
     override suspend fun downloadSongs(
         directory: PlatformFile,
         onProgress: (String) -> Unit
@@ -146,17 +162,8 @@ data class BeatSaverUserSyncMethod(
         onProgress("Getting user session")
         val session: Session = client.getSession()
 
-        onProgress("Getting playlists")
-        val playlists_result: BeatSaverUserPlaylistsResponse =
-            client.get("https://beatsaver.com/api/playlists/user/${session.user_id}/0") {
-                headers {
-                    append("Cookie", session.cookie)
-                }
-            }.body()
-
-        val bookmarks_playlist: BeatSaverPlaylist =
-            playlists_result.docs.firstOrNull { it.isSystemPlaylist() }
-            ?: throw RuntimeException("Bookmarks playlist not found")
+        onProgress("Getting bookmarks playlist")
+        val bookmarks_playlist: BeatSaverPlaylist = client.getBookmarksPlaylist(session)
 
         onProgress("Getting bookmarks")
         val bookmarks_result: BeatSaverPlaylistResponse =
@@ -222,6 +229,48 @@ data class BeatSaverUserSyncMethod(
         }
 
         return@runCatching added_maps
+    }
+
+    override fun canUploadSongs(): Boolean = true
+
+    override suspend fun uploadSongs(
+        songs: List<Song>,
+        onProgress: (String) -> Unit
+    ): Result<Unit> = runCatching {
+        val client: HttpClient = getClient()
+
+        onProgress("Getting user session")
+        val session: Session = client.getSession()
+
+        onProgress("Getting bookmarks playlist")
+        val bookmarks_playlist: BeatSaverPlaylist = client.getBookmarksPlaylist(session)
+
+        onProgress("Adding maps to bookmarks")
+
+        val hash_chunks: List<List<String>> = songs.map { it.hash }.chunked(100)
+
+        for ((index, chunk) in hash_chunks.withIndex()) {
+            onProgress("Adding maps to bookmarks (chunk ${index + 1} of ${hash_chunks.size})")
+
+            val response: HttpResponse =
+                client.post("https://beatsaver.com/api/playlists/id/${bookmarks_playlist.playlistId}/batch") {
+                    headers {
+                        append("Cookie", session.cookie)
+                    }
+
+                    contentType(ContentType.Application.Json)
+                    setBody(Json.encodeToString(
+                        buildJsonObject {
+                            putJsonArray("hashes") {
+                                addAll(chunk)
+                            }
+                            put("ignoreUnknown", true)
+                            put("inPlaylist", true)
+                            putJsonArray("keys") {}
+                        }
+                    ))
+                }
+        }
     }
 
     override fun toString(): String {
