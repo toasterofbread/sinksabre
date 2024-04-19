@@ -15,7 +15,7 @@ This is a [Compose Multiplatform](https://github.com/JetBrains/compose-multiplat
 - View bookmarked maps
 
 > [!NOTE]
-> BeatSaver accounts registered using Discord cannot be used. Sync using a playlist instead.
+> BeatSaver accounts registered using Discord cannot be used. Sync using a public playlist instead.
 
 ## Installation
 
