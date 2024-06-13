@@ -6,12 +6,18 @@ import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.putJsonArray
 import kotlinx.serialization.json.put
 import kotlinx.serialization.json.addAll
+import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.json.JsonElement
+import kotlinx.serialization.json.jsonPrimitive
 import kotlinx.serialization.encodeToString
 import dev.toastbits.sinksabre.sync.beatsaver.*
 import dev.toastbits.sinksabre.platform.AppContext
 import dev.toastbits.sinksabre.ui.component.settingsfield.StringSettingsField
 import dev.toastbits.sinksabre.settings.Settings
 import dev.toastbits.composekit.platform.PlatformFile
+import dev.toastbits.composekit.platform.PreferencesGroup
+import dev.toastbits.composekit.platform.PreferencesProperty
+import dev.toastbits.composekit.platform.PlatformPreferences
 import dev.toatsbits.sinksabre.model.Song
 import dev.toatsbits.sinksabre.model.LocalSong
 import androidx.compose.runtime.*
@@ -36,12 +42,30 @@ data class BeatSaverUserSyncMethod(
     override fun ConfigurationItems(context: AppContext, onModification: (SyncMethod) -> Unit) {
         StringSettingsField(
             remember(this) {
-                object : Settings.Field<String> {
-                    override fun get(): String = username
-                    override fun set(value: String) = onModification(copy(username = value))
+                object : PreferencesProperty<String> {
+                    override fun get(): String =
+                        username
 
-                    override fun getName(): String = "Username"
-                    override fun getDescription(): String? = null
+                    override fun set(value: String, editor: PlatformPreferences.Editor?) {
+                        onModification(copy(username = value))
+                    }
+
+                    override fun set(data: JsonElement, editor: PlatformPreferences.Editor?) {
+                        set(data.jsonPrimitive.content, editor)
+                    }
+
+                    override val key: String = ""
+                    override val name: String = "Username"
+                    override val description: String? = null
+
+                    override fun serialise(value: Any?): JsonElement =
+                        JsonPrimitive(value as String?)
+
+                    override fun getDefaultValue(): String = ""
+
+                    override fun reset() {
+                        set(getDefaultValue())
+                    }
 
                     @Composable
                     override fun observe(): MutableState<String> {
@@ -63,12 +87,30 @@ data class BeatSaverUserSyncMethod(
 
         StringSettingsField(
             remember(this) {
-                object : Settings.Field<String> {
-                    override fun get(): String = password
-                    override fun set(value: String) = onModification(copy(password = value))
+                object : PreferencesProperty<String> {
+                    override fun get(): String =
+                        password
 
-                    override fun getName(): String = "Password"
-                    override fun getDescription(): String? = null
+                    override fun set(value: String, editor: PlatformPreferences.Editor?) {
+                        onModification(copy(password = value))
+                    }
+
+                    override fun set(data: JsonElement, editor: PlatformPreferences.Editor?) {
+                        set(data.jsonPrimitive.content, editor)
+                    }
+
+                    override val key: String = ""
+                    override val name: String = "Password"
+                    override val description: String? = null
+
+                    override fun serialise(value: Any?): JsonElement =
+                        JsonPrimitive(value as String?)
+
+                    override fun getDefaultValue(): String = ""
+
+                    override fun reset() {
+                        set(getDefaultValue())
+                    }
 
                     @Composable
                     override fun observe(): MutableState<String> {

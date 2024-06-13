@@ -59,19 +59,19 @@ private class State {
 }
 
 @Composable
-fun SinkSabre(context: AppContext) {
+fun SinkSabre(context: AppContext, allow_dialogs: Boolean = true) {
     val state: State = remember { State() }
 
     AppTheme {
-        state.Content(context)
+        state.Content(context, allow_dialogs)
     }
 }
 
 @Composable
-private fun State.Content(context: AppContext) {
+private fun State.Content(context: AppContext, allow_dialogs: Boolean = true) {
     var scroll_warning_dismissed: Boolean by context.settings.SCROLL_WARNING_DISMISSED.observe()
 
-    if (!scroll_warning_dismissed) {
+    if (allow_dialogs && !scroll_warning_dismissed) {
         AlertDialog(
             { },
             confirmButton = {

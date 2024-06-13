@@ -29,6 +29,7 @@ import androidx.compose.animation.Crossfade
 import androidx.compose.animation.AnimatedVisibility
 import dev.toastbits.sinksabre.platform.localsongs.LocalSongs
 import dev.toastbits.sinksabre.sync.SyncMethod
+import dev.toastbits.sinksabre.settings.settings
 import dev.toastbits.composekit.platform.composable.ScrollBarLazyColumn
 import dev.toatsbits.sinksabre.model.Song
 import dev.toatsbits.sinksabre.model.LocalSong
@@ -50,7 +51,7 @@ fun InspectMenu(
     var loaded_songs: List<Song>? by remember { mutableStateOf(null) }
     var load_error: Throwable? by remember { mutableStateOf(null) }
     var reloaded: Boolean by remember { mutableStateOf(false) }
-    val sync_method: SyncMethod? by SyncMethod.observe(context)
+    val sync_method: SyncMethod? by context.settings.SYNC_METHOD.observe()
 
     var only_show_session_added: Boolean by remember { mutableStateOf(false) }
 

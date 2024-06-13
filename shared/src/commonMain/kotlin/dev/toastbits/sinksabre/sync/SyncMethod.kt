@@ -1,21 +1,18 @@
 package dev.toastbits.sinksabre.sync
 
-import kotlinx.serialization.Serializable
+import androidx.compose.runtime.Composable
+import dev.toastbits.sinksabre.platform.AppContext
+import dev.toastbits.composekit.platform.PlatformFile
 import dev.toatsbits.sinksabre.model.Song
 import dev.toatsbits.sinksabre.model.LocalSong
-import dev.toastbits.sinksabre.platform.AppContext
-import dev.toastbits.sinksabre.settings.settings
-import dev.toastbits.composekit.utils.composable.OnChangedEffect
-import dev.toastbits.composekit.platform.PlatformFile
 import io.ktor.client.HttpClient
 import io.ktor.client.engine.cio.CIO
+import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
 import io.ktor.client.plugins.HttpTimeout
 import io.ktor.client.plugins.HttpRequestRetry
-import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
 import io.ktor.serialization.kotlinx.json.json
 import kotlinx.serialization.json.Json
-import kotlinx.serialization.encodeToString
-import androidx.compose.runtime.*
+import kotlinx.serialization.Serializable
 
 @Serializable
 sealed interface SyncMethod {
@@ -69,38 +66,7 @@ sealed interface SyncMethod {
                 exponentialDelay()
             }
         }
-
-    companion object {
-        @Composable
-        fun observe(context: AppContext): MutableState<SyncMethod?> {
-            var data: String by context.settings.SYNC_METHOD.observe()
-            val state: MutableState<SyncMethod?> = remember { mutableStateOf(data.decodeSyncMethod()) }
-            var set_to: SyncMethod? by remember { mutableStateOf(state.value) }
-
-            LaunchedEffect(state.value) {
-                if (state.value != set_to) {
-                    set_to = state.value
-                    data = set_to?.let { Json.encodeToString(it) } ?: ""
-                }
-            }
-
-            OnChangedEffect(data) {
-                set_to = data.decodeSyncMethod()
-                state.value = set_to
-            }
-
-            return state
-        }
-    }
 }
-
-private fun String.decodeSyncMethod(): SyncMethod? =
-    try {
-        Json.decodeFromString<SyncMethod>(this)
-    }
-    catch (_: Throwable) {
-        null
-    }
 
 fun SyncMethod.Type?.getName(): String =
     when (this) {

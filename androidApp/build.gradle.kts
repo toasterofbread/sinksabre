@@ -32,7 +32,7 @@ keystore_props.load(FileInputStream(keystore_props_file))
 
 android {
     compileSdk = (findProperty("android.compileSdk") as String).toInt()
-    namespace = "dev.toastbits"
+    namespace = "dev.toastbits.sinksabre"
 
     sourceSets["main"].manifest.srcFile("src/androidMain/AndroidManifest.xml")
 

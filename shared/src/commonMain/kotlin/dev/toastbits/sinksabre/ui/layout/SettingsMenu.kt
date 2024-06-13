@@ -3,6 +3,7 @@ package dev.toastbits.sinksabre.ui.layout
 import androidx.compose.runtime.*
 import dev.toastbits.sinksabre.platform.AppContext
 import dev.toastbits.sinksabre.settings.*
+import dev.toastbits.sinksabre.settings.settings
 import dev.toastbits.sinksabre.ui.component.MenuTitleBar
 import dev.toastbits.sinksabre.ui.component.settingsfield.*
 import dev.toastbits.composekit.utils.composable.NullableValueAnimatedVisibility
@@ -44,7 +45,7 @@ fun SettingsMenu(context: AppContext, modifier: Modifier = Modifier) {
 @Composable
 private fun SyncMethodField(context: AppContext) {
     var show_sync_method_selector: Boolean by remember { mutableStateOf(false) }
-    var sync_method: SyncMethod? by SyncMethod.observe(context)
+    var sync_method: SyncMethod? by context.settings.SYNC_METHOD.observe()
 
     LargeDropdownMenu(
         show_sync_method_selector,
@@ -66,8 +67,8 @@ private fun SyncMethodField(context: AppContext) {
     }
 
     SettingsField(
-        name = context.settings.SYNC_METHOD.getName(),
-        description = context.settings.SYNC_METHOD.getDescription(),
+        name = context.settings.SYNC_METHOD.name,
+        description = context.settings.SYNC_METHOD.description,
         oneline = true
     ) {
         Button({ show_sync_method_selector = true }) {

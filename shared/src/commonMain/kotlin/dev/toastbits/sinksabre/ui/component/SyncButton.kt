@@ -85,7 +85,7 @@ fun SyncButton(
     val coroutine_scope: CoroutineScope = rememberCoroutineScope()
     val outer_content_colour: Color = LocalContentColor.current
 
-    val sync_method: SyncMethod? by SyncMethod.observe(context)
+    val sync_method: SyncMethod? by context.settings.SYNC_METHOD.observe()
     var sync_error: Throwable? by remember { mutableStateOf(null) }
 
     var syncing: Boolean by remember { mutableStateOf(false) }

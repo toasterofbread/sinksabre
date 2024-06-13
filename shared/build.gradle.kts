@@ -1,12 +1,20 @@
+import org.gradle.api.publish.maven.MavenPublication
+import org.gradle.api.tasks.bundling.Jar
+import org.gradle.kotlin.dsl.`maven-publish`
+
 plugins {
     kotlin("multiplatform")
     kotlin("plugin.serialization") version "1.9.0"
     id("com.android.library")
     id("org.jetbrains.compose")
+
+    `maven-publish`
 }
 
 kotlin {
-    androidTarget()
+    androidTarget {
+        publishLibraryVariants("release")
+    }
     jvm("desktop")
 
     sourceSets {
@@ -55,7 +63,7 @@ kotlin {
 
 android {
     compileSdk = (findProperty("android.compileSdk") as String).toInt()
-    namespace = "dev.toastbits.common"
+    namespace = "dev.toastbits.sinksabre.shared"
 
     sourceSets["main"].manifest.srcFile("src/androidMain/AndroidManifest.xml")
     sourceSets["main"].res.srcDirs("src/androidMain/res")
@@ -70,5 +78,49 @@ android {
     }
     kotlin {
         jvmToolchain(17)
+    }
+}
+
+publishing {
+    publications {
+        afterEvaluate { afterEvaluate {
+            withType<MavenPublication> {
+                artifactId = artifactId.replace("shared", "sinksabre")
+
+                artifact(tasks.register("${name}JavadocJar", Jar::class) {
+                    archiveClassifier.set("javadoc")
+                    archiveAppendix.set(this@withType.name)
+                })
+
+                pom {
+                    name.set("sinksabre")
+                    description.set("An alternative to the Beat Saber sync function provided by BMBF and BeatSaver for Oculus Quest")
+                    url.set("https://github.com/toasterofbread/sinksabre")
+
+                    licenses {
+                        license {
+                            name.set("GPL-3.0")
+                            url.set("https://www.gnu.org/licenses/gpl-3.0.en.html")
+                        }
+                    }
+                    developers {
+                        developer {
+                            id.set("toasterofbread")
+                            name.set("Talo Halton")
+                            email.set("talohalton@gmail.com")
+                            url.set("https://github.com/toasterofbread")
+                        }
+                    }
+                    scm {
+                        connection.set("https://github.com/toasterofbread/sinksabre.git")
+                        url.set("https://github.com/toasterofbread/sinksabre")
+                    }
+                    issueManagement {
+                        system.set("Github")
+                        url.set("https://github.com/toasterofbread/sinksabre/issues")
+                    }
+                }
+            }
+        } }
     }
 }
