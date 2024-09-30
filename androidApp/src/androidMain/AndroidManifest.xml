@@ -14,7 +14,7 @@
         android:requestLegacyExternalStorage="true" >
 
         <activity
-            android:name=".sinksabre.MainActivity"
+            android:name=".MainActivity"
             android:exported="true"
             android:configChanges="orientation|screenSize|screenLayout|keyboardHidden|mnc|colorMode|density|fontScale|fontWeightAdjustment|keyboard|layoutDirection|locale|mcc|navigation|smallestScreenSize|touchscreen|uiMode"
             android:screenOrientation="landscape">

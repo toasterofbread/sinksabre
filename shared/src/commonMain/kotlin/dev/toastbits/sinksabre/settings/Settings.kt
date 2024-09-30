@@ -27,7 +27,7 @@ class Settings(val context: AppContext): PreferencesGroup(null, context.getPrefs
         getName = { "Local maps path" },
         getDescription = { null },
         getDefaultValue = {
-            if (context.isRunningOnQuest()) "/storage/emulated/0/ModData/com.beatgames.beatsaber/Mods/SongLoader/CustomLevels"
+            if (context.isRunningOnQuest()) "/storage/emulated/0/ModData/com.beatgames.beatsaber/Mods/SongCore/CustomLevels"
             else when (Platform.current) {
                 Platform.ANDROID -> "/storage/emulated/0/BeatSaberMaps"
                 Platform.DESKTOP -> context.getFilesDir().resolve("maps").absolutePath
