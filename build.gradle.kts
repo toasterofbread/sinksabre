@@ -8,5 +8,5 @@ plugins {
 
 allprojects {
     group = "dev.toastbits.sinksabre"
-    version = "0.1.1"
+    version = "1.0.0"
 }
