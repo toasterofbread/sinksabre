@@ -119,10 +119,17 @@ suspend fun HttpClient.getSession(username: String, password: String): BeatSaver
 
     val index_body: String = index_response.bodyAsText()
 
-    val user_id_key: String = "&quot;userId&quot;: "
-    val user_id_index: Int = index_body.indexOf(user_id_key) + user_id_key.length
+    val user_id_key: String = "&quot;userId&quot;:"
 
-    val user_id: Int = index_body.substring(user_id_index, index_body.indexOf(",", user_id_index)).toInt()
+    val user_id_index: Int = index_body.indexOf(user_id_key) + user_id_key.length
+    check(user_id_index != user_id_key.length - 1) { index_body }
+
+    val user_id_section: String = index_body.substring(user_id_index).trimStart()
+
+    val user_id_end: Int = user_id_section.indexOfFirst { !it.isDigit() }
+    check(user_id_end != -1) { user_id_section }
+
+    val user_id: Int = user_id_section.substring(0, user_id_end).trimEnd().toInt()
 
     return BeatSaverSession(
         cookie = cookie,
