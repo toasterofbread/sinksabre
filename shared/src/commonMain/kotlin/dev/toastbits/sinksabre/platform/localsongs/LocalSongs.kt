@@ -12,6 +12,7 @@ import kotlinx.coroutines.sync.withPermit
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.Dispatchers
+import kotlinx.serialization.ExperimentalSerializationApi
 import java.io.File
 
 expect object LocalSongs {
@@ -71,8 +72,46 @@ suspend fun loadLocalSongsInDirectory(directory: PlatformFile): List<LocalSong> 
     return songs.filterNotNull()
 }
 
+interface SongInfoData {
+    fun toLocalSong(song_directory: PlatformFile): LocalSong
+
+    companion object {
+        @OptIn(ExperimentalSerializationApi::class)
+        private val json: Json =
+            Json {
+                ignoreUnknownKeys = true
+                explicitNulls = false
+                allowTrailingComma = true
+            }
+
+        fun fromString(string: String): SongInfoData {
+            val version: List<String> = getVersion(string).split(".")
+            try {
+                return when (version.first()) {
+                    "4" -> json.decodeFromString<SongInfoDatav4>(string)
+                    else -> json.decodeFromString<SongInfoDatav2>(string)
+                }
+            }
+            catch (e: Throwable) {
+                throw RuntimeException("Parsing SongInfoData with version $version from '$string' failed", e)
+            }
+        }
+
+        @Serializable
+        private data class VersionInfo(
+            val version: String? = null,
+            val _version: String? = null
+        )
+
+        private fun getVersion(string: String): String =
+            json.decodeFromString<VersionInfo>(string).let { (version, _version) ->
+                version ?: _version ?: throw NotImplementedError("Version string not found in '$string'")
+            }
+    }
+}
+
 @Serializable
-data class SongInfoData(
+private data class SongInfoDatav2(
     val _songName: String,
     val _songSubName: String,
     val _songAuthorName: String,
@@ -80,8 +119,8 @@ data class SongInfoData(
     val _beatsPerMinute: Float,
     val _songFilename: String,
     val _coverImageFilename: String
-) {
-    fun toLocalSong(song_directory: PlatformFile): LocalSong =
+): SongInfoData {
+    override fun toLocalSong(song_directory: PlatformFile): LocalSong =
         LocalSong(
             hash = song_directory.name,
             name = _songName.filledOrNull(),
@@ -96,13 +135,35 @@ data class SongInfoData(
     private fun String.filledOrNull(): String? =
         if (isBlank()) null
         else this
+}
 
-    companion object {
-        fun fromString(string: String): SongInfoData =
-            Json {
-                ignoreUnknownKeys = true
-                explicitNulls = false
-                allowTrailingComma = true
-            }.decodeFromString(string)
-    }
+@Serializable
+private data class SongInfoDatav4(
+    val song: Song,
+    val audio: Audio,
+    val coverImageFilename: String
+): SongInfoData {
+    @Serializable
+    data class Song(
+        val title: String,
+        val subTitle: String,
+        val author: String
+    )
+
+    @Serializable
+    data class Audio(
+        val bpm: Float,
+        val songFilename: String
+    )
+
+    override fun toLocalSong(song_directory: PlatformFile): LocalSong =
+        SongInfoDatav2(
+            _songName = song.title,
+            _songSubName = song.subTitle,
+            _songAuthorName = song.author,
+            _levelAuthorName = "Unknown", // TODO
+            _beatsPerMinute = audio.bpm,
+            _songFilename = audio.songFilename,
+            _coverImageFilename = coverImageFilename
+        ).toLocalSong(song_directory)
 }
