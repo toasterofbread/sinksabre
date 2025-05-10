@@ -59,7 +59,7 @@ sealed interface SyncMethod {
                 )
             }
             install(HttpTimeout) {
-                requestTimeoutMillis = 10000
+                requestTimeoutMillis = 30000
             }
             install(HttpRequestRetry) {
                 retryOnServerErrors(maxRetries = 5)
