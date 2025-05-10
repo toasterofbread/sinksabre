@@ -9,6 +9,7 @@ pluginManagement {
         gradlePluginPortal()
         mavenCentral()
         google()
+        maven("https://maven.toastbits.dev/")
     }
 
     plugins {
@@ -26,6 +27,8 @@ pluginManagement {
         id("org.jetbrains.compose").version(compose_version)
 
         id("io.github.gradle-nexus.publish-plugin").version("2.0.0")
+
+        id("dev.toastbits.gradleremoterunner").version("0.0.5")
     }
 }
 
