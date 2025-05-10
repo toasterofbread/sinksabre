@@ -102,6 +102,7 @@ data class SongInfoData(
             Json {
                 ignoreUnknownKeys = true
                 explicitNulls = false
+                allowTrailingComma = true
             }.decodeFromString(string)
     }
 }
